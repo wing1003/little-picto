@@ -1,0 +1,16 @@
+# VSCode
+.vscode
+
+# Xcode
+.xcode
+
+# Swift
+.swiftpm
+
+# Firebase
+firebase-ios-sdk
+
+# Node.js
+node_modules
+
+.DS_Store
