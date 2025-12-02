@@ -12,6 +12,8 @@
 		AC3032FD2EDD2CA1009059C6 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = AC3032FC2EDD2CA1009059C6 /* FirebaseDatabase */; };
 		AC3032FF2EDD3043009059C6 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AC3032FE2EDD3043009059C6 /* FirebaseCore */; };
 		AC3033012EDD3326009059C6 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AC3033002EDD3326009059C6 /* FirebaseCore */; };
+		AC3033492EDE7CCE009059C6 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = AC3033482EDE7CCE009059C6 /* GoogleSignIn */; };
+		AC30334B2EDE7CCE009059C6 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = AC30334A2EDE7CCE009059C6 /* GoogleSignInSwift */; };
 		AC40A1002F2F9D8D009059C6 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = AC40A1012F2F9D8D009059C6 /* FirebaseAuth */; };
 /* End PBXBuildFile section */
 
@@ -38,9 +40,22 @@
 		AC3032A22ED94242009059C6 /* LittlePictoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LittlePictoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AC30334D2EDEBB47009059C6 /* Exceptions for "LittlePicto" folder in "LittlePicto" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AC3032862ED9423F009059C6 /* LittlePicto */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AC3032892ED9423F009059C6 /* LittlePicto */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AC30334D2EDEBB47009059C6 /* Exceptions for "LittlePicto" folder in "LittlePicto" target */,
+			);
 			path = LittlePicto;
 			sourceTree = "<group>";
 		};
@@ -64,9 +79,11 @@
 				AC3032F92EDD2CA1009059C6 /* FirebaseAnalytics in Frameworks */,
 				AC3032FF2EDD3043009059C6 /* FirebaseCore in Frameworks */,
 				AC3032FB2EDD2CA1009059C6 /* FirebaseCore in Frameworks */,
+				AC30334B2EDE7CCE009059C6 /* GoogleSignInSwift in Frameworks */,
 				AC3032FD2EDD2CA1009059C6 /* FirebaseDatabase in Frameworks */,
 				AC3033012EDD3326009059C6 /* FirebaseCore in Frameworks */,
 				AC40A1002F2F9D8D009059C6 /* FirebaseAuth in Frameworks */,
+				AC3033492EDE7CCE009059C6 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +150,8 @@
 				AC3032FC2EDD2CA1009059C6 /* FirebaseDatabase */,
 				AC3032FE2EDD3043009059C6 /* FirebaseCore */,
 				AC3033002EDD3326009059C6 /* FirebaseCore */,
+				AC3033482EDE7CCE009059C6 /* GoogleSignIn */,
+				AC30334A2EDE7CCE009059C6 /* GoogleSignInSwift */,
 			);
 			productName = LittlePicto;
 			productReference = AC3032872ED9423F009059C6 /* LittlePicto.app */;
@@ -218,6 +237,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AC3032B72ED96739009059C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				AC3033472EDE7CCE009059C6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AC3032882ED9423F009059C6 /* Products */;
@@ -420,6 +440,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LittlePicto/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -436,7 +458,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.7;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_BUNDLE_IDENTIFIER = com.varink.LittlePicto;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.varink.little-picto";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
@@ -460,6 +482,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LittlePicto/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -476,7 +500,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.7;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_BUNDLE_IDENTIFIER = com.varink.LittlePicto;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.varink.little-picto";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
@@ -627,6 +651,14 @@
 				minimumVersion = 12.6.0;
 			};
 		};
+		AC3033472EDE7CCE009059C6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -649,6 +681,16 @@
 		AC3033002EDD3326009059C6 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FirebaseCore;
+		};
+		AC3033482EDE7CCE009059C6 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC3033472EDE7CCE009059C6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		AC30334A2EDE7CCE009059C6 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC3033472EDE7CCE009059C6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
 		};
 		AC40A1012F2F9D8D009059C6 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -14,12 +14,6 @@ struct LittlePictoApp: App {
     // register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
-    init() {
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
-    }
-    
     var body: some Scene {
         WindowGroup {
             ContentView()

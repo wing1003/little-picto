@@ -1,4 +1,6 @@
 import SwiftUI
+import AuthenticationServices
+import UIKit
 
 struct AuthenticationView: View {
     @ObservedObject var viewModel: AuthViewModel
@@ -77,6 +79,8 @@ struct AuthenticationView: View {
                 }
                 .disabled(viewModel.isProcessing)
             }
+
+            thirdPartyButtons
             
             if let error = viewModel.errorMessage {
                 Text(error)
@@ -103,6 +107,71 @@ struct AuthenticationView: View {
     private enum Field {
         case email
         case password
+    }
+
+    @ViewBuilder
+    private var thirdPartyButtons: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Rectangle()
+                    .frame(height: 1)
+                    .foregroundStyle(.secondary.opacity(0.3))
+                Text("or")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Rectangle()
+                    .frame(height: 1)
+                    .foregroundStyle(.secondary.opacity(0.3))
+            }
+            .padding(.vertical, 4)
+            
+            SignInWithAppleButton(.signIn) { request in
+                focusedField = nil
+                viewModel.prepareSignInWithAppleRequest(request)
+            } onCompletion: { result in
+                viewModel.handleSignInWithApple(result)
+            }
+            .signInWithAppleButtonStyle(.black)
+            .frame(height: 50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .disabled(viewModel.isProcessing)
+            
+            Button {
+                focusedField = nil
+                viewModel.signInWithGoogle(presenting: topViewController())
+            } label: {
+                HStack {
+                    Image(systemName: "g.circle")
+                        .font(.title3)
+                    Text("Sign in with Google")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+            }
+            .buttonStyle(.bordered)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .disabled(viewModel.isProcessing)
+        }
+    }
+
+    private func topViewController(base: UIViewController? = nil) -> UIViewController? {
+        let base = base ?? UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first(where: { $0.activationState == .foregroundActive })?
+            .windows.first(where: { $0.isKeyWindow })?
+            .rootViewController
+        
+        if let nav = base as? UINavigationController {
+            return topViewController(base: nav.visibleViewController)
+        }
+        if let tab = base as? UITabBarController, let selected = tab.selectedViewController {
+            return topViewController(base: selected)
+        }
+        if let presented = base?.presentedViewController {
+            return topViewController(base: presented)
+        }
+        return base
     }
 }
 
