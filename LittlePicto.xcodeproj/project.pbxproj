@@ -14,6 +14,8 @@
 		AC3033012EDD3326009059C6 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AC3033002EDD3326009059C6 /* FirebaseCore */; };
 		AC3033492EDE7CCE009059C6 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = AC3033482EDE7CCE009059C6 /* GoogleSignIn */; };
 		AC30334B2EDE7CCE009059C6 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = AC30334A2EDE7CCE009059C6 /* GoogleSignInSwift */; };
+		AC3033532EDECDDD009059C6 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = AC3033522EDECDDD009059C6 /* FirebaseFirestore */; };
+		AC3033552EDECDDD009059C6 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = AC3033542EDECDDD009059C6 /* FirebaseFirestoreCombine-Community */; };
 		AC40A1002F2F9D8D009059C6 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = AC40A1012F2F9D8D009059C6 /* FirebaseAuth */; };
 /* End PBXBuildFile section */
 
@@ -79,8 +81,10 @@
 				AC3032F92EDD2CA1009059C6 /* FirebaseAnalytics in Frameworks */,
 				AC3032FF2EDD3043009059C6 /* FirebaseCore in Frameworks */,
 				AC3032FB2EDD2CA1009059C6 /* FirebaseCore in Frameworks */,
+				AC3033552EDECDDD009059C6 /* FirebaseFirestoreCombine-Community in Frameworks */,
 				AC30334B2EDE7CCE009059C6 /* GoogleSignInSwift in Frameworks */,
 				AC3032FD2EDD2CA1009059C6 /* FirebaseDatabase in Frameworks */,
+				AC3033532EDECDDD009059C6 /* FirebaseFirestore in Frameworks */,
 				AC3033012EDD3326009059C6 /* FirebaseCore in Frameworks */,
 				AC40A1002F2F9D8D009059C6 /* FirebaseAuth in Frameworks */,
 				AC3033492EDE7CCE009059C6 /* GoogleSignIn in Frameworks */,
@@ -152,6 +156,8 @@
 				AC3033002EDD3326009059C6 /* FirebaseCore */,
 				AC3033482EDE7CCE009059C6 /* GoogleSignIn */,
 				AC30334A2EDE7CCE009059C6 /* GoogleSignInSwift */,
+				AC3033522EDECDDD009059C6 /* FirebaseFirestore */,
+				AC3033542EDECDDD009059C6 /* FirebaseFirestoreCombine-Community */,
 			);
 			productName = LittlePicto;
 			productReference = AC3032872ED9423F009059C6 /* LittlePicto.app */;
@@ -691,6 +697,14 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AC3033472EDE7CCE009059C6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		AC3033522EDECDDD009059C6 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FirebaseFirestore;
+		};
+		AC3033542EDECDDD009059C6 /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "FirebaseFirestoreCombine-Community";
 		};
 		AC40A1012F2F9D8D009059C6 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -2,16 +2,43 @@ import SwiftUI
 
 struct MaterialLibraryView: View {
     let materials: [Material]
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @State private var isShowingPaywall = false
+    
+    /// Free users only see non‑premium materials, while premium users see everything.
+    private var visibleMaterials: [Material] {
+        subscriptionManager.isPremium ? materials : materials.filter { $0.isPremium == false }
+    }
     
     var body: some View {
-        List(materials) { material in
+        List(visibleMaterials) { material in
             NavigationLink(value: material) {
                 MaterialRow(material: material)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if !subscriptionManager.isPremium && materials.contains(where: { $0.isPremium }) {
+                VStack(spacing: 8) {
+                    Text("You're seeing the basic library.")
+                        .font(.footnote)
+                    Button("Unlock all materials") {
+                        isShowingPaywall = true
+                    }
+                    .font(.footnote.bold())
+                }
+                .padding()
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding()
             }
         }
         .navigationTitle("Material Library")
         .navigationDestination(for: Material.self) { material in
             MaterialDetailView(material: material)
+        }
+        .sheet(isPresented: $isShowingPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionManager)
         }
     }
 }

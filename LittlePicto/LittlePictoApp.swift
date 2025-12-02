@@ -8,15 +8,19 @@
 import SwiftUI
 import FirebaseCore
 
-
 @main
 struct LittlePictoApp: App {
-    // register app delegate for Firebase setup
+    // Register app delegate for Firebase setup.
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
+    /// Global subscription manager, injected into the environment so any view
+    /// can check `isPremium` or trigger purchases.
+    @StateObject private var subscriptionManager = SubscriptionManager()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(subscriptionManager)
         }
     }
 }
