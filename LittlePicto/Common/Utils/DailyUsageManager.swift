@@ -1,69 +1,82 @@
 import Foundation
 
-final class DailyUsageManager {
-    static let shared = DailyUsageManager()
-    
-    enum ResetMode {
-        case perDay
-        case perMinutes(Int)
-    }
-    
-    // 修改这个变量可以切换重置策略（如 .perDay 或 .perMinutes(5)）
-//    var resetMode: ResetMode = .perMinutes(5)
-    var resetMode: ResetMode = .perDay
-    
-    private let lastUsageDateKey = "com.pausehere.lastUsageDate"
-    private let dailyUsageCountKey = "com.pausehere.dailyUsageCount"
-    private let maxDailyUsage = 1
-    
-    private init() {}
+enum UsagePeriod {
+    case perDay
+    case perWeek   // NEW: limit counted by calendar week
+    case unlimited
+}
 
-    func canUseToday() -> Bool {
+struct DailyUsageManager {
+    private let calendar = Calendar.current
+    private let maxWeeklyUses = 3
+    private let maxDailyUses = 1
+
+    private let period: UsagePeriod
+    private var lastResetDate: Date?
+    private var currentCount: Int = 0
+
+    mutating func canUseNow() -> Bool {
         let now = Date()
-        
-        if let lastUsageDate = UserDefaults.standard.object(forKey: lastUsageDateKey) as? Date {
-            let shouldReset: Bool
-            
-            switch resetMode {
-            case .perDay:
-                let calendar = Calendar.current
-                let today = calendar.startOfDay(for: now)
-                let lastDay = calendar.startOfDay(for: lastUsageDate)
-                shouldReset = !calendar.isDate(today, inSameDayAs: lastDay)
-                
-            case .perMinutes(let minutes):
-                let interval = now.timeIntervalSince(lastUsageDate)
-                shouldReset = interval >= Double(minutes * 60)
-            }
-            
-            if shouldReset {
-                resetDailyUsage()
-                return true
-            } else {
-                let usageCount = UserDefaults.standard.integer(forKey: dailyUsageCountKey)
-                return usageCount < maxDailyUsage
-            }
-        } else {
-            // First time usage
-            resetDailyUsage()
+
+        switch period {
+        case .perDay:
+            resetIfNewDay(now: now)
+            return currentCount < maxDailyUses   // whatever you use today
+
+        case .perWeek:
+            resetIfNewWeek(now: now)
+            return currentCount < maxWeeklyUses  // 3 uses per week
+
+        case .unlimited:
             return true
         }
     }
-    
-    func incrementUsage() {
-        let currentCount = UserDefaults.standard.integer(forKey: dailyUsageCountKey)
-        UserDefaults.standard.set(currentCount + 1, forKey: dailyUsageCountKey)
-        UserDefaults.standard.set(Date(), forKey: lastUsageDateKey)
+
+    mutating func recordUse() {
+        let now = Date()
+
+        switch period {
+        case .perDay:
+            resetIfNewDay(now: now)
+        case .perWeek:
+            resetIfNewWeek(now: now)
+        case .unlimited:
+            break
+        }
+
+        currentCount += 1
     }
-    
-    func resetDailyUsage() {
-        UserDefaults.standard.set(0, forKey: dailyUsageCountKey)
-        UserDefaults.standard.set(Date(), forKey: lastUsageDateKey)
+
+    // MARK: - Helpers
+
+    private mutating func resetIfNewDay(now: Date) {
+        guard let last = lastResetDate else {
+            lastResetDate = now
+            currentCount = 0
+            return
+        }
+        if !calendar.isDate(now, inSameDayAs: last) {
+            lastResetDate = now
+            currentCount = 0
+        }
     }
-    
-    func getRemainingUsage() -> Int {
-        _ = canUseToday() // ensure state is up to date
-        let usageCount = UserDefaults.standard.integer(forKey: dailyUsageCountKey)
-        return max(0, maxDailyUsage - usageCount)
+
+    private mutating func resetIfNewWeek(now: Date) {
+        guard let last = lastResetDate else {
+            lastResetDate = now
+            currentCount = 0
+            return
+        }
+
+        let lastWeek = calendar.component(.weekOfYear, from: last)
+        let lastYear = calendar.component(.yearForWeekOfYear, from: last)
+        let currentWeek = calendar.component(.weekOfYear, from: now)
+        let currentYear = calendar.component(.yearForWeekOfYear, from: now)
+
+        if lastWeek != currentWeek || lastYear != currentYear {
+            // New calendar week: reset usage
+            lastResetDate = now
+            currentCount = 0
+        }
     }
 }

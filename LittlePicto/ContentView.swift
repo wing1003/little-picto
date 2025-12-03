@@ -45,6 +45,8 @@ struct ContentView: View {
                 switch destination {
                 case .snapPhoto:
                     SnapPhotoView()
+                        // Hide the default navigation bar while the camera is open
+                        .toolbar(.hidden, for: .navigationBar)
                 }
             }
         }
