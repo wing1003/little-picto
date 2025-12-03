@@ -7,7 +7,7 @@ import StoreKit
 /// This view relies on `SubscriptionManager` from the environment:
 /// `@EnvironmentObject var subscriptionManager: SubscriptionManager`.
 struct PaywallView: View {
-    @Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.dismiss) private var dismiss
     @EnvironmentObject var subscriptionManager: SubscriptionManager
 
     private var monthlyProduct: Product? {
