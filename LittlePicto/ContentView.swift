@@ -76,19 +76,54 @@ private struct LoadingView: View {
 private struct HomeView: View {
     let materials: [Material]
     let userDisplayName: String
+
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @StateObject private var snapPhotoVM: SnapPhotoViewModel
     @Binding var navigationPath: NavigationPath
     @State private var bounceAnimation = false
+    @State private var isShowingPaywall = false
+    @State private var isShowingQuotaAlert = false
+    @State private var quotaAlertMessage: String?
+    
+    init(materials: [Material], userDisplayName: String, navigationPath: Binding<NavigationPath>) {
+           self.materials = materials
+           self.userDisplayName = userDisplayName
+           self._navigationPath = navigationPath
+           // _snapPhotoVM cannot be initialized here; use a custom initClosure in real code
+           _snapPhotoVM = StateObject(wrappedValue: SnapPhotoViewModel(subscriptionManager: SubscriptionManager()))
+       }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                heroSection
-                materialLibraryPreview
+            ScrollView {
+                VStack(alignment: .leading, spacing: 32) {
+                    heroSection
+                    materialLibraryPreview
+                }
+                .padding()
             }
-            .padding()
+            .navigationTitle("🎨 LittlePicto")
+            .onChange(of: snapPhotoVM.navigateToCamera) { go in
+                if go {
+                    navigationPath.append(NavigationDestination.snapPhoto)
+                    snapPhotoVM.consumeCameraNavigation()
+                }
+            }
+            .onChange(of: snapPhotoVM.showPaywall) { show in
+                if show {
+                    quotaAlertMessage = snapPhotoVM.quotaAlertMessage
+                    isShowingPaywall = true
+                }
+            }
+            .alert("Notice", isPresented: $isShowingQuotaAlert, actions: {
+                Button("OK", role: .cancel) { }
+            }, message: {
+                Text(quotaAlertMessage ?? "")
+            })
+            .sheet(isPresented: $isShowingPaywall) {
+                PaywallView()
+                    .environmentObject(subscriptionManager)
+            }
         }
-        .navigationTitle("🎨 LittlePicto")
-    }
     
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -119,7 +154,7 @@ private struct HomeView: View {
                 .font(.title3)
                 .foregroundStyle(.secondary)
             
-            Button(action: { navigationPath.append(NavigationDestination.snapPhoto) }) {
+            Button(action: { snapPhotoVM.snapPhoto() }) {
                 HStack(spacing: 12) {
                     Image(systemName: "camera.fill")
                         .font(.title2)
