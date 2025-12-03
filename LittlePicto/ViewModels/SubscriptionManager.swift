@@ -25,8 +25,8 @@ final class SubscriptionManager: ObservableObject {
 
     /// Product identifiers configured in App Store Connect.
     private let productIDs: Set<String> = [
-        "premium_monthly",
-        "premium_yearly"
+        "com.varink.littlepicto.premium_monthly",
+        "com.varink.littlepicto.premium_yearly"
     ]
 
     private let db = Firestore.firestore()
@@ -49,6 +49,7 @@ final class SubscriptionManager: ObservableObject {
             let storeProducts = try await Product.products(for: Array(productIDs))
             // Sort into a stable order (e.g. monthly before yearly).
             products = storeProducts.sorted { $0.id < $1.id }
+            print("Loaded products:", products.map { $0.id })
         } catch {
             errorMessage = "Unable to load subscription products: \(error.localizedDescription)"
         }
@@ -131,7 +132,7 @@ final class SubscriptionManager: ObservableObject {
 
         // 2. Read the server copy from Firestore.
         let firestoreStatus = await fetchSubscriptionStatusFromFirestore()
-        let firestorePremium = firestoreStatus == "premium"
+        _ = firestoreStatus == "premium"
 
         // 3. Reconcile:
         //    - If StoreKit says premium, we trust it and overwrite Firestore.

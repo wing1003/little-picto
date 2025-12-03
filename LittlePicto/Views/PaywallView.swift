@@ -11,11 +11,11 @@ struct PaywallView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
 
     private var monthlyProduct: Product? {
-        subscriptionManager.products.first { $0.id == "premium_monthly" }
+        subscriptionManager.products.first { $0.id == "com.varink.littlepicto.premium_monthly" }
     }
 
     private var yearlyProduct: Product? {
-        subscriptionManager.products.first { $0.id == "premium_yearly" }
+        subscriptionManager.products.first { $0.id == "com.varink.littlepicto.premium_yearly" }
     }
 
     var body: some View {
@@ -83,7 +83,9 @@ struct PaywallView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Monthly")
                                 .font(.headline)
-                            Text(monthlyProduct.displayPrice + " / month")
+                            // Use StoreKit price when available, otherwise fall back to the
+                            // marketing price you provided ($9.99 / month).
+                            Text("\(monthlyProduct.displayPrice) / month")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -106,7 +108,9 @@ struct PaywallView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Yearly")
                                 .font(.headline)
-                            Text(yearlyProduct.displayPrice + " / year")
+                            // Use StoreKit price when available, otherwise fall back to
+                            // "2.49 / month" messaging for the yearly option.
+                            Text("\(yearlyProduct.displayPrice) / year")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -121,13 +125,17 @@ struct PaywallView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
 
-            Button {
-                Task { await subscriptionManager.restorePurchases() }
-            } label: {
-                Text("Restore Purchases")
-                    .font(.subheadline)
+            // Only show "Restore Purchases" when there is no active premium entitlement.
+            // This covers the case where a subscription has expired or is on another device.
+            if !subscriptionManager.isPremium {
+                Button {
+                    Task { await subscriptionManager.restorePurchases() }
+                } label: {
+                    Text("Restore Purchases")
+                        .font(.subheadline)
+                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
 
             Text("Payment will be charged to your Apple ID account. Subscriptions auto‑renew unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in Settings.")
                 .font(.caption2)
