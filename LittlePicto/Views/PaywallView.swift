@@ -10,11 +10,19 @@ struct PaywallView: View {
     @State private var selectedPlan: PlanType?
     
     private var monthlyProduct: Product? {
-        subscriptionManager.products.first { $0.id == "com.varink.littlepicto.premium_monthly" }
+        subscriptionManager.products.first { $0.id == SubscriptionProductID.monthlyPremium.rawValue }
     }
 
     private var yearlyProduct: Product? {
-        subscriptionManager.products.first { $0.id == "com.varink.littlepicto.premium_yearly" }
+        subscriptionManager.products.first { $0.id == SubscriptionProductID.yearlyPremium.rawValue }
+    }
+    
+    private var monthlyMockProduct: ProductModel? {
+        subscriptionManager.mockProducts.first { $0.id == SubscriptionProductID.monthlyPremium.rawValue }
+    }
+    
+    private var yearlyMockProduct: ProductModel? {
+        subscriptionManager.mockProducts.first { $0.id == SubscriptionProductID.yearlyPremium.rawValue }
     }
 
     var body: some View {
@@ -178,36 +186,32 @@ struct PaywallView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             VStack(spacing: 16) {
-                if let yearlyProduct {
-                    PlanCard(
-                        planType: .yearly,
-                        title: "Best Value! 🌟",
-                        subtitle: "Save the most money",
-                        price: yearlyProduct.displayPrice,
-                        period: "per year",
-                        savings: "Save 75%!",
-                        isSelected: selectedPlan == .yearly,
-                        isRecommended: true
-                    ) {
-                        selectedPlan = .yearly
-                        Task { await subscriptionManager.purchase(yearlyProduct) }
-                    }
+                PlanCard(
+                    planType: .yearly,
+                    title: "Best Value! 🌟",
+                    subtitle: "Save the most money",
+                    price: priceText(for: .yearly),
+                    period: periodText(for: .yearly),
+                    savings: "Save 75%!",
+                    isSelected: selectedPlan == .yearly,
+                    isRecommended: true
+                ) {
+                    selectedPlan = .yearly
+                    Task { await handleSubscribe(for: .yearly) }
                 }
                 
-                if let monthlyProduct {
-                    PlanCard(
-                        planType: .monthly,
-                        title: "Monthly Fun",
-                        subtitle: "Pay as you go",
-                        price: monthlyProduct.displayPrice,
-                        period: "per month",
-                        savings: nil,
-                        isSelected: selectedPlan == .monthly,
-                        isRecommended: false
-                    ) {
-                        selectedPlan = .monthly
-                        Task { await subscriptionManager.purchase(monthlyProduct) }
-                    }
+                PlanCard(
+                    planType: .monthly,
+                    title: "Monthly Fun",
+                    subtitle: "Pay as you go",
+                    price: priceText(for: .monthly),
+                    period: periodText(for: .monthly),
+                    savings: nil,
+                    isSelected: selectedPlan == .monthly,
+                    isRecommended: false
+                ) {
+                    selectedPlan = .monthly
+                    Task { await handleSubscribe(for: .monthly) }
                 }
             }
 
@@ -226,6 +230,72 @@ struct PaywallView: View {
                     .padding(.vertical, 12)
                 }
                 .buttonStyle(BounceButtonStyle())
+            }
+        }
+    }
+    
+    private func priceText(for plan: PlanType) -> String {
+        switch plan {
+        case .monthly:
+            if let displayPrice = monthlyProduct?.displayPrice {
+                return displayPrice
+            }
+            if let mockPrice = monthlyMockProduct?.price {
+                return mockPrice
+            }
+            return SubscriptionProductID.monthlyPremium.mockPrice
+        case .yearly:
+            if let displayPrice = yearlyProduct?.displayPrice {
+                return displayPrice
+            }
+            if let mockPrice = yearlyMockProduct?.price {
+                return mockPrice
+            }
+            return SubscriptionProductID.yearlyPremium.mockPrice
+        }
+    }
+    
+    private func periodText(for plan: PlanType) -> String {
+        if let product = planProduct(for: plan),
+           let period = product.subscription?.subscriptionPeriod {
+            switch period.unit {
+            case .month:
+                return "per month"
+            case .year:
+                return "per year"
+            default:
+                break
+            }
+        }
+        
+        switch plan {
+        case .monthly:
+            return monthlyMockProduct?.subscriptionPeriod ?? "per month"
+        case .yearly:
+            return yearlyMockProduct?.subscriptionPeriod ?? "per year"
+        }
+    }
+    
+    private func planProduct(for plan: PlanType) -> Product? {
+        switch plan {
+        case .monthly: return monthlyProduct
+        case .yearly: return yearlyProduct
+        }
+    }
+    
+    private func handleSubscribe(for plan: PlanType) async {
+        if let product = planProduct(for: plan) {
+            _ = await subscriptionManager.purchase(product)
+            return
+        }
+        
+        await subscriptionManager.loadProducts()
+        
+        if let refreshedProduct = planProduct(for: plan) {
+            _ = await subscriptionManager.purchase(refreshedProduct)
+        } else {
+            await MainActor.run {
+                subscriptionManager.errorMessage = "Subscriptions are unavailable right now. Please try again in a moment."
             }
         }
     }

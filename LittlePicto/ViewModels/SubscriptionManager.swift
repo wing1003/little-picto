@@ -16,8 +16,8 @@ enum SubscriptionProductID: String, CaseIterable {
     
     var mockPrice: String {
         switch self {
-        case .monthlyPremium: return "$4.99"
-        case .yearlyPremium: return "$39.99"
+        case .monthlyPremium: return "$9.99"
+        case .yearlyPremium: return "$29.99"
         }
     }
 }
@@ -121,6 +121,7 @@ class SubscriptionManager: ObservableObject {
     func loadProducts() async {
         do {
             let storeProducts = try await Product.products(for: productIDs)
+            print("storeProducts: \(storeProducts)")
             
             guard !storeProducts.isEmpty else {
                 loadMockProducts()
