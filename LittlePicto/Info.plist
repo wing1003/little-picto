@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSCameraUsageDescription</key>
-	<string>&quot;LittlePicto&quot; requires camera access to scan QR codes for full feature activation, while providing real-time environmental detection with visual feedback. All image data is processed locally for immediate functionality and will neither be stored nor uploaded.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -13,7 +11,7 @@
 			<string>google-auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.48869932398-94o4oo1afccicqp443jbiivdkkpe91pr</string>
+				<string>com.googleusercontent.apps.48869932398-ke2k4lp537q5o88nsbq1nir3e3rmp8o3</string>
 			</array>
 		</dict>
 	</array>

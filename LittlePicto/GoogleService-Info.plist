@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>48869932398-94o4oo1afccicqp443jbiivdkkpe91pr.apps.googleusercontent.com</string>
+	<string>48869932398-ke2k4lp537q5o88nsbq1nir3e3rmp8o3.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.48869932398-94o4oo1afccicqp443jbiivdkkpe91pr</string>
+	<string>com.googleusercontent.apps.48869932398-ke2k4lp537q5o88nsbq1nir3e3rmp8o3</string>
 	<key>API_KEY</key>
 	<string>AIzaSyBiYsDmmgyZI5x77NX32tFskGs3jB6jgkc</string>
 	<key>GCM_SENDER_ID</key>
@@ -13,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.varink.LittlePicto</string>
+	<string>com.varink.littlepicto</string>
 	<key>PROJECT_ID</key>
 	<string>littlepicto</string>
 	<key>STORAGE_BUCKET</key>
@@ -29,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:48869932398:ios:d5ba27ce71a119e09dd57f</string>
+	<string>1:48869932398:ios:200742226d1a38889dd57f</string>
 </dict>
 </plist>

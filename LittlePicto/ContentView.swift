@@ -1,12 +1,18 @@
 import SwiftUI
 
-// Navigation destination enum for programmatic navigation
+// MARK: - Navigation Destination
+
 enum NavigationDestination: Hashable {
     case snapPhoto
+    case materialLibrary
+    case materialDetail(Material)
 }
+
+// MARK: - Content View
 
 struct ContentView: View {
     @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var navigationPath = NavigationPath()
     
     var body: some View {
@@ -20,19 +26,10 @@ struct ContentView: View {
                         userDisplayName: authViewModel.userDisplayName,
                         navigationPath: $navigationPath
                     )
+                    .environmentObject(subscriptionManager)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Menu {
-                                Button(role: .destructive) {
-                                    authViewModel.signOut()
-                                } label: {
-                                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                                }
-                            } label: {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.title2)
-                                    .foregroundStyle(.purple)
-                            }
+                            userMenuButton
                         }
                     }
                 } else {
@@ -42,16 +39,82 @@ struct ContentView: View {
             }
             .animation(.easeInOut, value: authViewModel.currentUser != nil)
             .navigationDestination(for: NavigationDestination.self) { destination in
-                switch destination {
-                case .snapPhoto:
-                    SnapPhotoView()
-                        // Hide the default navigation bar while the camera is open
-                        .toolbar(.hidden, for: .navigationBar)
-                }
+                navigationDestinationView(for: destination)
+            }
+        }
+        .task {
+            // Initialize subscription manager when app launches
+            if authViewModel.currentUser != nil {
+                await subscriptionManager.initialize()
             }
         }
     }
+    
+    // MARK: - Subviews
+    
+    private var userMenuButton: some View {
+        Menu {
+            // Subscription status
+            Section {
+                if subscriptionManager.isPremium {
+                    Label(
+                        subscriptionManager.currentSubscriptionTier == .monthly ? "Monthly Premium" : "Yearly Premium",
+                        systemImage: "crown.fill"
+                    )
+                } else {
+                    Label("Free Account", systemImage: "person.circle")
+                }
+            }
+            
+            // Actions
+            Section {
+                if !subscriptionManager.isPremium {
+                    Button {
+                        // Show paywall
+                    } label: {
+                        Label("Upgrade to Premium", systemImage: "star.fill")
+                    }
+                }
+                
+                Button {
+                    // Show settings
+                } label: {
+                    Label("Settings", systemImage: "gear")
+                }
+            }
+            
+            Section {
+                Button(role: .destructive) {
+                    authViewModel.signOut()
+                } label: {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            }
+        } label: {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.title2)
+                .foregroundStyle(.purple)
+        }
+    }
+    
+    @ViewBuilder
+    private func navigationDestinationView(for destination: NavigationDestination) -> some View {
+        switch destination {
+        case .snapPhoto:
+            SnapPhotoView()
+                .environmentObject(subscriptionManager)
+                .toolbar(.hidden, for: .navigationBar)
+            
+        case .materialLibrary:
+            MaterialLibraryView(materials: Material.sampleLibrary)
+            
+        case .materialDetail(let material):
+            MaterialDetailView(material: material)
+        }
+    }
 }
+
+// MARK: - Loading View
 
 private struct LoadingView: View {
     @State private var isAnimating = false
@@ -73,57 +136,64 @@ private struct LoadingView: View {
     }
 }
 
+// MARK: - Home View
+
 private struct HomeView: View {
     let materials: [Material]
     let userDisplayName: String
-
-    @EnvironmentObject var subscriptionManager: SubscriptionManager
-    @StateObject private var snapPhotoVM: SnapPhotoViewModel
     @Binding var navigationPath: NavigationPath
+    
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @StateObject private var snapPhotoVM: SnapPhotoViewModel
+    
     @State private var bounceAnimation = false
-    @State private var isShowingPaywall = false
-    @State private var isShowingQuotaAlert = false
-    @State private var quotaAlertMessage: String?
     
     init(materials: [Material], userDisplayName: String, navigationPath: Binding<NavigationPath>) {
-           self.materials = materials
-           self.userDisplayName = userDisplayName
-           self._navigationPath = navigationPath
-           // _snapPhotoVM cannot be initialized here; use a custom initClosure in real code
-           _snapPhotoVM = StateObject(wrappedValue: SnapPhotoViewModel(subscriptionManager: SubscriptionManager()))
-       }
+        self.materials = materials
+        self.userDisplayName = userDisplayName
+        self._navigationPath = navigationPath
+        
+        // Initialize with shared subscription manager
+        self._snapPhotoVM = StateObject(wrappedValue: SnapPhotoViewModel(subscriptionManager: .shared))
+    }
     
     var body: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
-                    heroSection
-                    materialLibraryPreview
+        ScrollView {
+            VStack(alignment: .leading, spacing: 32) {
+                heroSection
+                
+                // Quota display for premium users
+                if subscriptionManager.isPremium, let quotaInfo = snapPhotoVM.quotaInfo {
+                    quotaDisplaySection(quotaInfo)
                 }
-                .padding()
+                
+                materialLibraryPreview
             }
-            .navigationTitle("🎨 LittlePicto")
-            .onChange(of: snapPhotoVM.navigateToCamera) { go in
-                if go {
-                    navigationPath.append(NavigationDestination.snapPhoto)
-                    snapPhotoVM.consumeCameraNavigation()
-                }
-            }
-            .onChange(of: snapPhotoVM.showPaywall) { show in
-                if show {
-                    quotaAlertMessage = snapPhotoVM.quotaAlertMessage
-                    isShowingPaywall = true
-                }
-            }
-            .alert("Notice", isPresented: $isShowingQuotaAlert, actions: {
-                Button("OK", role: .cancel) { }
-            }, message: {
-                Text(quotaAlertMessage ?? "")
-            })
-            .sheet(isPresented: $isShowingPaywall) {
-                PaywallView()
-                    .environmentObject(subscriptionManager)
+            .padding()
+        }
+        .navigationTitle("🎨 LittlePicto")
+        .onAppear {
+            snapPhotoVM.refreshQuotaInfo()
+        }
+        .onChange(of: snapPhotoVM.navigateToCamera) { _, shouldNavigate in
+            if shouldNavigate {
+                navigationPath.append(NavigationDestination.snapPhoto)
+                snapPhotoVM.didNavigateToCamera()
             }
         }
+        .sheet(isPresented: $snapPhotoVM.showPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionManager)
+                .onDisappear {
+                    snapPhotoVM.didDismissPaywall()
+                }
+        }
+        .alert(item: $snapPhotoVM.currentAlert) { alert in
+            createAlert(from: alert)
+        }
+    }
+    
+    // MARK: - Hero Section
     
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -154,28 +224,7 @@ private struct HomeView: View {
                 .font(.title3)
                 .foregroundStyle(.secondary)
             
-            Button(action: { snapPhotoVM.snapPhoto() }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "camera.fill")
-                        .font(.title2)
-                    Text("Snap a Photo!")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-                .background(
-                    LinearGradient(
-                        colors: [.purple, .pink],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .shadow(color: .purple.opacity(0.4), radius: 8, x: 0, y: 4)
-            }
-            .buttonStyle(BounceButtonStyle())
+            snapPhotoButton
         }
         .padding(24)
         .background(
@@ -189,6 +238,113 @@ private struct HomeView: View {
         .shadow(color: .orange.opacity(0.2), radius: 10, x: 0, y: 5)
     }
     
+    private var snapPhotoButton: some View {
+        Button(action: { snapPhotoVM.snapPhoto() }) {
+            HStack(spacing: 12) {
+                if snapPhotoVM.viewState == .checking {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "camera.fill")
+                        .font(.title2)
+                }
+                
+                Text(snapPhotoVM.viewState == .checking ? "Checking..." : "Snap a Photo!")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(
+                LinearGradient(
+                    colors: snapPhotoVM.viewState == .checking ? [.gray, .gray.opacity(0.8)] : [.purple, .pink],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: .purple.opacity(0.4), radius: 8, x: 0, y: 4)
+        }
+        .buttonStyle(BounceButtonStyle())
+        .disabled(snapPhotoVM.viewState == .checking)
+    }
+    
+    // MARK: - Quota Display Section
+    
+    private func quotaDisplaySection(_ info: QuotaInfo) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "chart.bar.fill")
+                    .foregroundStyle(.purple)
+                
+                Text("Your Monthly Usage")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                Text("\(info.remaining)/\(info.limit)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(info.isNearLimit ? .orange : .secondary)
+            }
+            
+            // Progress Bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.gray.opacity(0.2))
+                    
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(
+                            LinearGradient(
+                                colors: progressGradient(for: info),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geometry.size.width * info.percentageUsed)
+                }
+            }
+            .frame(height: 12)
+            
+            // Warning if near limit
+            if info.isNearLimit && !info.isAtLimit {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text("Running low! Consider upgrading for more.")
+                        .font(.caption)
+                }
+                .foregroundStyle(.orange)
+                .padding(8)
+                .frame(maxWidth: .infinity)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(Color.purple.opacity(0.2), lineWidth: 2)
+        )
+    }
+    
+    private func progressGradient(for info: QuotaInfo) -> [Color] {
+        if info.isAtLimit {
+            return [.red, .red.opacity(0.7)]
+        } else if info.isNearLimit {
+            return [.orange, .yellow]
+        } else {
+            return [.purple, .pink]
+        }
+    }
+    
+    // MARK: - Material Library Preview
+    
     private var materialLibraryPreview: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
@@ -201,17 +357,21 @@ private struct HomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                NavigationLink("See All →") {
-                    MaterialLibraryView(materials: materials)
+                Button {
+                    navigationPath.append(NavigationDestination.materialLibrary)
+                } label: {
+                    Text("See All →")
+                        .font(.headline)
+                        .foregroundStyle(.purple)
                 }
-                .font(.headline)
-                .foregroundStyle(.purple)
             }
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 20) {
-                    ForEach(materials) { material in
-                        NavigationLink(value: material) {
+                    ForEach(materials.prefix(5)) { material in
+                        Button {
+                            navigationPath.append(NavigationDestination.materialDetail(material))
+                        } label: {
                             MaterialPreviewCard(material: material)
                         }
                         .buttonStyle(ScaleButtonStyle())
@@ -221,12 +381,36 @@ private struct HomeView: View {
                 .padding(.vertical, 8)
             }
             .scrollTargetBehavior(.viewAligned)
-            .navigationDestination(for: Material.self) { material in
-                MaterialDetailView(material: material)
-            }
+        }
+    }
+    
+    // MARK: - Alert Helper
+    
+    private func createAlert(from config: QuotaAlert) -> Alert {
+        if let secondaryButton = config.secondaryButton {
+            return Alert(
+                title: Text(config.title),
+                message: Text(config.message),
+                primaryButton: .default(Text(config.primaryButton)) {
+                    snapPhotoVM.handleAlertAction(isPrimary: true)
+                },
+                secondaryButton: .cancel(Text(secondaryButton)) {
+                    snapPhotoVM.handleAlertAction(isPrimary: false)
+                }
+            )
+        } else {
+            return Alert(
+                title: Text(config.title),
+                message: Text(config.message),
+                dismissButton: .default(Text(config.primaryButton)) {
+                    snapPhotoVM.handleAlertAction(isPrimary: true)
+                }
+            )
         }
     }
 }
+
+// MARK: - Material Preview Card
 
 private struct MaterialPreviewCard: View {
     let material: Material
@@ -280,28 +464,8 @@ private struct MaterialPreviewCard: View {
     }
 }
 
-private struct PhotoPickerPlaceholder: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "camera.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.purple)
-            
-            Text("Camera is coming soon! 📸")
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Text("We're working on something awesome for you!")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-        }
-        .padding()
-    }
-}
+// MARK: - Custom Button Styles
 
-// Custom button styles for kid-friendly interactions
 struct BounceButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -317,6 +481,8 @@ struct ScaleButtonStyle: ButtonStyle {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
+
+// MARK: - Preview
 
 #Preview {
     ContentView()

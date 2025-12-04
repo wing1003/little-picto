@@ -15,12 +15,15 @@ struct LittlePictoApp: App {
 
     /// Global subscription manager, injected into the environment so any view
     /// can check `isPremium` or trigger purchases.
-    @StateObject private var subscriptionManager = SubscriptionManager()
-
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(subscriptionManager)
+                .task {
+                    await subscriptionManager.initialize()
+                }
         }
     }
 }
