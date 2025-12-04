@@ -137,7 +137,6 @@ private struct LoadingView: View {
 }
 
 // MARK: - Home View
-
 private struct HomeView: View {
     let materials: [Material]
     let userDisplayName: String

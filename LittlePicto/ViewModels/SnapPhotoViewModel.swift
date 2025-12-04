@@ -78,7 +78,6 @@ final class SnapPhotoViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
-    
     init(subscriptionManager: SubscriptionManager = .shared) {
         self.subscriptionManager = subscriptionManager
         observeSubscriptionChanges()

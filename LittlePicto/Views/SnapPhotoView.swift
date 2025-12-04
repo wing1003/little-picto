@@ -1,13 +1,21 @@
 import SwiftUI
 import AVFoundation
 
+// MARK: - Snap Photo View
+
 struct SnapPhotoView: View {
     @StateObject private var camera = CameraViewModel()
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    
     @State private var isAwaitingPhotoDecision = false
     @State private var isShowingCropper = false
     @State private var sparkleAnimation = false
+    @State private var quotaInfo: QuotaInfo?
+    
     @SwiftUI.Environment(\.dismiss) private var dismiss
-
+    
+    private let quotaManager = QuotaManager()
+    
     var body: some View {
         ZStack {
             // Camera Feed
@@ -16,18 +24,21 @@ struct SnapPhotoView: View {
             
             // Fun Sparkly Scanner Frame
             FunScannerFrame()
-
+            
             // Top Navigation Bar
             topBar
-
+            
             // Bottom Toolbar
             bottomBar
         }
-        .onAppear {
+        .task {
             camera.start()
             sparkleAnimation = true
+            await refreshQuotaInfo()
         }
-        .onDisappear { camera.stop() }
+        .onDisappear {
+            camera.stop()
+        }
         .sheet(isPresented: $isShowingCropper) {
             if let image = camera.capturedImage {
                 PhotoCropperSheet(
@@ -44,52 +55,70 @@ struct SnapPhotoView: View {
             }
         }
     }
-
+    
     // MARK: - Top Bar
+    
     private var topBar: some View {
         VStack {
             HStack {
                 Button(action: { dismiss() }) {
                     FunCircleButton(icon: "arrow.left", color: .purple)
                 }
-
+                
                 Spacer()
-
-                HStack(spacing: 6) {
-                    Image(systemName: "camera.fill")
-                        .font(.headline)
-                    Text("Photo Time!")
-                        .font(.headline)
-                        .fontWeight(.bold)
+                
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "camera.fill")
+                            .font(.headline)
+                        Text("Photo Time!")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                    }
+                    .foregroundColor(.white)
+                    
+                    // Quota indicator
+                    if let quota = quotaInfo, subscriptionManager.isPremium {
+                        HStack(spacing: 4) {
+                            Image(systemName: quotaIcon(for: quota))
+                                .font(.caption2)
+                            Text("\(quota.remaining) left")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(quotaColor(for: quota))
+                    }
                 }
-                .foregroundColor(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(.ultraThinMaterial)
                 .clipShape(Capsule())
-
+                
                 Spacer()
-
-                Button(action: {}) {
-                    FunCircleButton(icon: "sparkles", color: .pink)
+                
+                Button(action: {
+                    Task { await refreshQuotaInfo() }
+                }) {
+                    FunCircleButton(icon: "arrow.clockwise", color: .pink)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 15)
-
+            
             Spacer()
         }
     }
-
+    
     // MARK: - Bottom Bar
+    
     private var bottomBar: some View {
         VStack(spacing: 16) {
             Spacer()
-
+            
             if !isAwaitingPhotoDecision {
                 funToolTip
             }
-
+            
             if isAwaitingPhotoDecision {
                 photoConfirmationButtons
             } else {
@@ -100,7 +129,7 @@ struct SnapPhotoView: View {
         }
         .padding(.bottom, 40)
     }
-
+    
     private var funToolTip: some View {
         HStack(spacing: 8) {
             Image(systemName: "hand.point.down.fill")
@@ -185,6 +214,8 @@ struct SnapPhotoView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24))
     }
     
+    // MARK: - Actions
+    
     private func triggerPhotoCapture() {
         let impactHeavy = UIImpactFeedbackGenerator(style: .heavy)
         impactHeavy.impactOccurred()
@@ -207,18 +238,75 @@ struct SnapPhotoView: View {
         camera.start()
         isAwaitingPhotoDecision = false
     }
-
+    
     private func handleCropCancel() {
         camera.resetCapture()
         camera.start()
     }
-
+    
     private func handleCropConfirm(_ croppedImage: UIImage) {
-        camera.saveCroppedPhoto(croppedImage) {
-            camera.start()
+        Task {
+            // Record the usage in quota manager
+            let tier = subscriptionManager.currentSubscriptionTier
+            do {
+                _ = try await quotaManager.checkAndConsumeQuota(for: tier)
+                await refreshQuotaInfo()
+            } catch {
+                print("Failed to record quota usage: \(error)")
+            }
+            
+            // Save the photo
+            camera.saveCroppedPhoto(croppedImage) {
+                camera.start()
+            }
+        }
+    }
+    
+    private func refreshQuotaInfo() async {
+        let tier = subscriptionManager.currentSubscriptionTier
+        
+        guard tier != .free else {
+            quotaInfo = nil
+            return
+        }
+        
+        do {
+            let (used, limit, remaining) = try await quotaManager.getCurrentQuota(for: tier)
+            quotaInfo = QuotaInfo(
+                tier: tier,
+                used: used,
+                remaining: remaining,
+                limit: limit
+            )
+        } catch {
+            print("Failed to fetch quota info: \(error)")
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func quotaIcon(for info: QuotaInfo) -> String {
+        if info.isAtLimit {
+            return "exclamationmark.circle.fill"
+        } else if info.isNearLimit {
+            return "exclamationmark.triangle.fill"
+        } else {
+            return "checkmark.circle.fill"
+        }
+    }
+    
+    private func quotaColor(for info: QuotaInfo) -> Color {
+        if info.isAtLimit {
+            return .red
+        } else if info.isNearLimit {
+            return .orange
+        } else {
+            return .green
         }
     }
 }
+
+// MARK: - Fun Circle Button
 
 struct FunCircleButton: View {
     let icon: String
@@ -241,6 +329,8 @@ struct FunCircleButton: View {
     }
 }
 
+// MARK: - Fun Capture Button
+
 struct FunCaptureButton: View {
     @State private var isPulsing = false
     
@@ -260,12 +350,12 @@ struct FunCaptureButton: View {
                 .scaleEffect(isPulsing ? 1.1 : 1.0)
                 .opacity(isPulsing ? 0.5 : 1.0)
                 .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isPulsing)
-
+            
             // Middle ring
             Circle()
                 .stroke(Color.white.opacity(0.3), lineWidth: 4)
                 .frame(width: 85, height: 85)
-
+            
             // Inner button
             Circle()
                 .fill(
@@ -295,14 +385,15 @@ struct FunCaptureButton: View {
     }
 }
 
+// MARK: - Fun Scanner Frame
+
 struct FunScannerFrame: View {
     @State private var scanAnimation = false
-    @State private var sparklePositions: [CGPoint] = []
     
     var body: some View {
         GeometryReader { geo in
             let size = geo.size.width * 0.75
-
+            
             ZStack {
                 // Rounded corner brackets
                 funScannerCorners(size: size)
@@ -359,13 +450,13 @@ struct FunScannerFrame: View {
         default: return CGPoint(x: centerX + offset, y: centerY + offset) // Bottom-right
         }
     }
-
+    
     @ViewBuilder
     private func funScannerCorners(size: CGFloat) -> some View {
         let cornerLength: CGFloat = 35
         let thickness: CGFloat = 6
         let cornerRadius: CGFloat = 8
-
+        
         ZStack {
             // TOP LEFT
             VStack(spacing: 0) {
@@ -383,7 +474,7 @@ struct FunScannerFrame: View {
             .frame(width: cornerLength, height: cornerLength)
             .position(x: UIScreen.main.bounds.width/2 - size/2,
                       y: UIScreen.main.bounds.height/2 - size/2)
-
+            
             HStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(
@@ -399,7 +490,7 @@ struct FunScannerFrame: View {
             .frame(width: cornerLength, height: cornerLength)
             .position(x: UIScreen.main.bounds.width/2 - size/2,
                       y: UIScreen.main.bounds.height/2 - size/2)
-
+            
             // TOP RIGHT
             VStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -416,7 +507,7 @@ struct FunScannerFrame: View {
             .frame(width: cornerLength, height: cornerLength)
             .position(x: UIScreen.main.bounds.width/2 + size/2,
                       y: UIScreen.main.bounds.height/2 - size/2)
-
+            
             HStack(spacing: 0) {
                 Spacer()
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -432,7 +523,7 @@ struct FunScannerFrame: View {
             .frame(width: cornerLength, height: cornerLength)
             .position(x: UIScreen.main.bounds.width/2 + size/2,
                       y: UIScreen.main.bounds.height/2 - size/2)
-
+            
             // BOTTOM LEFT
             VStack(spacing: 0) {
                 Spacer()
@@ -449,7 +540,7 @@ struct FunScannerFrame: View {
             .frame(width: cornerLength, height: cornerLength)
             .position(x: UIScreen.main.bounds.width/2 - size/2,
                       y: UIScreen.main.bounds.height/2 + size/2)
-
+            
             HStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(
@@ -465,7 +556,7 @@ struct FunScannerFrame: View {
             .frame(width: cornerLength, height: cornerLength)
             .position(x: UIScreen.main.bounds.width/2 - size/2,
                       y: UIScreen.main.bounds.height/2 + size/2)
-
+            
             // BOTTOM RIGHT
             VStack(spacing: 0) {
                 Spacer()
@@ -482,7 +573,7 @@ struct FunScannerFrame: View {
             .frame(width: cornerLength, height: cornerLength)
             .position(x: UIScreen.main.bounds.width/2 + size/2,
                       y: UIScreen.main.bounds.height/2 + size/2)
-
+            
             HStack(spacing: 0) {
                 Spacer()
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -503,11 +594,9 @@ struct FunScannerFrame: View {
     }
 }
 
-// Reusable button style
-//struct BounceButtonStyle: ButtonStyle {
-//    func makeBody(configuration: Configuration) -> some View {
-//        configuration.label
-//            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-//            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
-//    }
-//}
+// MARK: - Preview
+
+#Preview {
+    SnapPhotoView()
+        .environmentObject(SubscriptionManager.shared)
+}
