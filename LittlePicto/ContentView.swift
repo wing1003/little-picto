@@ -14,6 +14,7 @@ struct ContentView: View {
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var navigationPath = NavigationPath()
+    @State private var showUpgradePaywall = false
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -41,6 +42,10 @@ struct ContentView: View {
             .navigationDestination(for: NavigationDestination.self) { destination in
                 navigationDestinationView(for: destination)
             }
+        }
+        .sheet(isPresented: $showUpgradePaywall) {
+            PaywallView()
+                .environmentObject(subscriptionManager)
         }
         .task {
             // Initialize subscription manager when app launches
@@ -70,17 +75,17 @@ struct ContentView: View {
             Section {
                 if !subscriptionManager.isPremium {
                     Button {
-                        // Show paywall
+                        showUpgradePaywall = true
                     } label: {
                         Label("Upgrade to Premium", systemImage: "star.fill")
                     }
                 }
                 
-                Button {
-                    // Show settings
-                } label: {
-                    Label("Settings", systemImage: "gear")
-                }
+//                Button {
+//                    // Show settings
+//                } label: {
+//                    Label("Settings", systemImage: "gear")
+//                }
             }
             
             Section {
