@@ -391,10 +391,10 @@ private struct HomeView: View {
                 title: Text(config.title),
                 message: Text(config.message),
                 primaryButton: .default(Text(config.primaryButton)) {
-                    snapPhotoVM.handleAlertAction(isPrimary: true)
+                    snapPhotoVM.handleAlertAction(config, isPrimary: true)
                 },
                 secondaryButton: .cancel(Text(secondaryButton)) {
-                    snapPhotoVM.handleAlertAction(isPrimary: false)
+                    snapPhotoVM.handleAlertAction(config, isPrimary: false)
                 }
             )
         } else {
@@ -402,7 +402,7 @@ private struct HomeView: View {
                 title: Text(config.title),
                 message: Text(config.message),
                 dismissButton: .default(Text(config.primaryButton)) {
-                    snapPhotoVM.handleAlertAction(isPrimary: true)
+                    snapPhotoVM.handleAlertAction(config, isPrimary: true)
                 }
             )
         }

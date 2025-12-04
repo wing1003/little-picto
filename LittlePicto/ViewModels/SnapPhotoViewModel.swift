@@ -5,11 +5,33 @@ import Combine
 // MARK: - Alert Configuration
 
 struct QuotaAlert: Identifiable {
+    enum PrimaryAction {
+        case showPaywall
+        case retrySnapPhoto
+        case requireSignIn
+        case none
+    }
+    
     let id = UUID()
     let title: String
     let message: String
     let primaryButton: String
     let secondaryButton: String?
+    let primaryAction: PrimaryAction
+    
+    init(
+        title: String,
+        message: String,
+        primaryButton: String,
+        secondaryButton: String? = nil,
+        primaryAction: PrimaryAction = .none
+    ) {
+        self.title = title
+        self.message = message
+        self.primaryButton = primaryButton
+        self.secondaryButton = secondaryButton
+        self.primaryAction = primaryAction
+    }
     
     static func quotaExceeded(tier: SubscriptionTier) -> QuotaAlert {
         let tierName = tier == .monthly ? "Monthly" : "Yearly"
@@ -17,7 +39,8 @@ struct QuotaAlert: Identifiable {
             title: "Monthly Limit Reached",
             message: "You've used all \(tier.monthlyQuota) detections for this month with your \(tierName) plan. Your quota will reset next month.",
             primaryButton: "OK",
-            secondaryButton: "Upgrade Plan"
+            secondaryButton: "Upgrade Plan",
+            primaryAction: .showPaywall
         )
     }
     
@@ -26,7 +49,8 @@ struct QuotaAlert: Identifiable {
             title: "Subscription Required",
             message: "Subscribe to unlock unlimited photo detections and premium features.",
             primaryButton: "Subscribe Now",
-            secondaryButton: "Cancel"
+            secondaryButton: "Cancel",
+            primaryAction: .showPaywall
         )
     }
     
@@ -35,7 +59,8 @@ struct QuotaAlert: Identifiable {
             title: "Connection Error",
             message: "We couldn't verify your subscription. Please check your internet connection and try again.",
             primaryButton: "Retry",
-            secondaryButton: "Cancel"
+            secondaryButton: "Cancel",
+            primaryAction: .retrySnapPhoto
         )
     }
     
@@ -44,7 +69,8 @@ struct QuotaAlert: Identifiable {
             title: "Sign In Required",
             message: "Please sign in to use photo detection features.",
             primaryButton: "Sign In",
-            secondaryButton: "Cancel"
+            secondaryButton: "Cancel",
+            primaryAction: .requireSignIn
         )
     }
 }
@@ -110,25 +136,26 @@ final class SnapPhotoViewModel: ObservableObject {
     }
     
     /// Handle alert button actions
-    func handleAlertAction(isPrimary: Bool) {
-        guard let alert = currentAlert else { return }
+    func handleAlertAction(_ alert: QuotaAlert, isPrimary: Bool) {
         currentAlert = nil
         
-        if isPrimary {
-            switch alert.title {
-            case "Subscription Required", "Monthly Limit Reached":
-                showPaywall = true
-                
-            case "Connection Error":
-                snapPhoto() // Retry
-                
-            case "Sign In Required":
-                // Trigger sign-in flow (implement based on your auth setup)
-                handleSignInRequired()
-                
-            default:
-                break
+        guard isPrimary else { return }
+        
+        switch alert.primaryAction {
+        case .showPaywall:
+            // Present paywall after the alert dismisses to avoid presentation conflicts.
+            DispatchQueue.main.async { [weak self] in
+                self?.showPaywall = true
             }
+            
+        case .retrySnapPhoto:
+            snapPhoto()
+            
+        case .requireSignIn:
+            handleSignInRequired()
+            
+        case .none:
+            break
         }
     }
     
