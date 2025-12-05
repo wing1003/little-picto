@@ -249,7 +249,7 @@ struct SnapPhotoView: View {
             // Record the usage in quota manager
             let tier = subscriptionManager.currentSubscriptionTier
             do {
-                _ = try await quotaManager.checkAndConsumeQuota(for: tier)
+                _ = try await quotaManager.checkQuotaStatus(for: tier)
                 await refreshQuotaInfo()
             } catch {
                 print("Failed to record quota usage: \(error)")

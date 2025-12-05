@@ -76,46 +76,79 @@ actor QuotaManager {
     /// - Parameter tier: subscription tier from `SubscriptionManager`
     /// - Returns: QuotaCheckResult indicating whether the action can proceed
     /// - Throws: QuotaManagerError if authentication or Firestore operations fail
-    func checkAndConsumeQuota(for tier: SubscriptionTier) async throws -> QuotaCheckResult {
+    /// Checks current quota status WITHOUT consuming quota.
+    /// Useful if you want to preview remaining credits before performing an action.
+    func checkQuotaStatus(for tier: SubscriptionTier) async throws -> QuotaCheckResult {
         guard let user = Auth.auth().currentUser else {
             throw QuotaManagerError.userNotAuthenticated
         }
-        
-        // Free users have no quota at all
+
         if tier == .free {
             try await ensureUserDocumentExists(for: user, tier: tier)
             return .mustSubscribe
         }
-        
+
         let monthlyLimit = tier.monthlyQuota
         let docRef = db.collection(collectionName).document(user.uid)
-        
-        // Fetch current quota data
+
         var quotaData = try await fetchQuotaData(for: user.uid, docRef: docRef)
         let now = Date()
-        
+
         // Reset if new month
         let didReset = resetQuotaIfNeeded(&quotaData, now: now)
-        
-        // Check if quota exceeded
+        if didReset {
+            quotaData.lastUpdatedAt = Timestamp(date: now)
+            try await saveQuotaData(quotaData, to: docRef, userId: user.uid)
+        }
+
+        // Quota exceeded?
         if quotaData.monthlyQuotaUsed >= monthlyLimit {
-            // Persist the reset if it occurred
-            if didReset {
-                quotaData.lastUpdatedAt = Timestamp(date: now)
-                try await saveQuotaData(quotaData, to: docRef, userId: user.uid)
-            }
             return .quotaExceeded
         }
-        
-        // Consume one credit
+
+        let remaining = monthlyLimit - quotaData.monthlyQuotaUsed
+        return .allowed(remaining: remaining)
+    }
+
+    /// Consumes ONE quota credit WITHOUT performing checks.
+    /// This should be called only after `checkQuotaStatus`.
+    func consumeQuota(for tier: SubscriptionTier) async throws -> Int {
+        guard let user = Auth.auth().currentUser else {
+            throw QuotaManagerError.userNotAuthenticated
+        }
+
+        let monthlyLimit = tier.monthlyQuota
+        let docRef = db.collection(collectionName).document(user.uid)
+
+        var quotaData = try await fetchQuotaData(for: user.uid, docRef: docRef)
+        let now = Date()
+
         quotaData.monthlyQuotaUsed += 1
         quotaData.subscriptionTier = tier.firestoreValue
         quotaData.lastUpdatedAt = Timestamp(date: now)
-        
+
         try await saveQuotaData(quotaData, to: docRef, userId: user.uid)
-        
-        let remaining = monthlyLimit - quotaData.monthlyQuotaUsed
-        return .allowed(remaining: remaining)
+
+        return monthlyLimit - quotaData.monthlyQuotaUsed
+    }
+
+
+
+    /// Combined method (original entry point) — now simply calls the two new methods.
+    func checkAndConsumeQuota(for tier: SubscriptionTier) async throws -> QuotaCheckResult {
+        let status = try await checkQuotaStatus(for: tier)
+
+        switch status {
+        case .allowed:
+            let remaining = try await consumeQuota(for: tier)
+            return .allowed(remaining: remaining)
+
+        case .mustSubscribe:
+            return .mustSubscribe
+
+        case .quotaExceeded:
+            return .quotaExceeded
+        }
     }
     
     /// Get current quota status without consuming a credit

@@ -176,7 +176,7 @@ final class SnapPhotoViewModel: ObservableObject {
             let tier = subscriptionManager.currentSubscriptionTier
             
             // 2. Check and consume quota
-            let result = try await quotaManager.checkAndConsumeQuota(for: tier)
+            let result = try await quotaManager.checkQuotaStatus(for: tier)
             
             // 3. Handle result
             await handleQuotaResult(result, tier: tier)
