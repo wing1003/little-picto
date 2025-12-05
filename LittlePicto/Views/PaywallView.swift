@@ -8,6 +8,7 @@ struct PaywallView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @State private var sparkleAnimation = false
     @State private var selectedPlan: PlanType?
+    @State private var isProcessingPurchase = false
     
     private var monthlyProduct: Product? {
         subscriptionManager.products.first { $0.id == SubscriptionProductID.monthlyPremium.rawValue }
@@ -197,7 +198,6 @@ struct PaywallView: View {
                     isRecommended: true
                 ) {
                     selectedPlan = .yearly
-                    Task { await handleSubscribe(for: .yearly) }
                 }
                 
                 PlanCard(
@@ -211,9 +211,38 @@ struct PaywallView: View {
                     isRecommended: false
                 ) {
                     selectedPlan = .monthly
-                    Task { await handleSubscribe(for: .monthly) }
                 }
             }
+            
+            Button {
+                Task { await confirmSubscription() }
+            } label: {
+                HStack(spacing: 10) {
+                    if isProcessingPurchase {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "checkmark.seal.fill")
+                    }
+                    
+                    Text(selectedPlan == nil ? "Choose a Plan" : "Confirm Subscription")
+                        .fontWeight(.bold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(
+                    LinearGradient(
+                        colors: selectedPlan == nil ? [.gray, .gray.opacity(0.7)] : [.purple, .pink],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .shadow(color: .purple.opacity(0.2), radius: 8, x: 0, y: 4)
+            }
+            .disabled(selectedPlan == nil || isProcessingPurchase)
+            .padding(.top, 8)
 
             // Restore purchases button
             if !subscriptionManager.isPremium {
@@ -284,19 +313,46 @@ struct PaywallView: View {
     }
     
     private func handleSubscribe(for plan: PlanType) async {
+        await MainActor.run { isProcessingPurchase = true }
+        defer {
+            Task { @MainActor in
+                isProcessingPurchase = false
+            }
+        }
+        
         if let product = planProduct(for: plan) {
-            _ = await subscriptionManager.purchase(product)
+            let success = await subscriptionManager.purchase(product)
+            await handlePurchaseResult(success, for: plan)
             return
         }
         
         await subscriptionManager.loadProducts()
         
         if let refreshedProduct = planProduct(for: plan) {
-            _ = await subscriptionManager.purchase(refreshedProduct)
+            let success = await subscriptionManager.purchase(refreshedProduct)
+            await handlePurchaseResult(success, for: plan)
         } else {
             await MainActor.run {
                 subscriptionManager.errorMessage = "Subscriptions are unavailable right now. Please try again in a moment."
             }
+        }
+    }
+    
+    private func confirmSubscription() async {
+        guard let plan = selectedPlan else {
+            await MainActor.run {
+                subscriptionManager.errorMessage = "Please pick a plan to continue."
+            }
+            return
+        }
+        
+        await handleSubscribe(for: plan)
+    }
+    
+    @MainActor
+    private func handlePurchaseResult(_ success: Bool, for plan: PlanType) {
+        if success {
+            selectedPlan = nil
         }
     }
     

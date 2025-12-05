@@ -59,15 +59,17 @@ struct ContentView: View {
     
     private var userMenuButton: some View {
         Menu {
-            // Subscription status
+            // Subscription Status
             Section {
                 if subscriptionManager.isPremium {
                     Label(
-                        subscriptionManager.currentSubscriptionTier == .monthly ? "Monthly Premium" : "Yearly Premium",
+                        subscriptionManager.currentSubscriptionTier == .monthly ?
+                        "You're a Monthly Premium Member 🎉" :
+                            "You're a Yearly Premium Member 🌟",
                         systemImage: "crown.fill"
                     )
                 } else {
-                    Label("Free Account", systemImage: "person.circle")
+                    Label("Free Account 😊", systemImage: "person.circle")
                 }
             }
             
@@ -77,24 +79,26 @@ struct ContentView: View {
                     Button {
                         showUpgradePaywall = true
                     } label: {
-                        Label("Upgrade to Premium", systemImage: "star.fill")
+                        Label("Become Premium ✨", systemImage: "star.fill")
                     }
                 }
                 
-//                Button {
-//                    // Show settings
-//                } label: {
-//                    Label("Settings", systemImage: "gear")
-//                }
-            }
-            
-            Section {
-                Button(role: .destructive) {
-                    authViewModel.signOut()
+                Button {
+                    // Show settings
                 } label: {
-                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    Label("Settings ⚙️", systemImage: "gear")
                 }
             }
+            
+            // Sign Out -- softer wording for kids
+            Section {
+                Button {
+                    authViewModel.signOut()
+                } label: {
+                    Label("Switch Account", systemImage: "arrowshape.turn.up.left")
+                }
+            }
+            
         } label: {
             Image(systemName: "person.crop.circle.fill")
                 .font(.title2)

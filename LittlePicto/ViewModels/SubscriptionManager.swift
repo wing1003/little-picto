@@ -16,8 +16,8 @@ enum SubscriptionProductID: String, CaseIterable {
     
     var mockPrice: String {
         switch self {
-        case .monthlyPremium: return "$9.99"
-        case .yearlyPremium: return "$29.99"
+        case .monthlyPremium: return "$4.99"
+        case .yearlyPremium: return "$19.99"
         }
     }
 }
